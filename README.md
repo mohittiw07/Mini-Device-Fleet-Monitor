@@ -104,8 +104,8 @@ No Docker or database required. All state is in-memory.
 
 ```bash
 # Clone the repository
-git clone <repo-url>
-cd mini-device-fleet-monitor
+git clone https://github.com/mohittiw07/Mini-Device-Fleet-Monitor.git
+cd Mini-Device-Fleet-Monitor
 
 # (Recommended) create a virtual environment
 python -m venv .venv
