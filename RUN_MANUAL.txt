@@ -1,0 +1,126 @@
+===============================================================================
+MINI DEVICE FLEET MONITOR - OPERATIONAL RUN MANUAL
+===============================================================================
+
+This document provides step-by-step instructions to set up, run, test, and
+verify the Mini Device Fleet Monitor application.
+
+-------------------------------------------------------------------------------
+1. PREREQUISITES
+-------------------------------------------------------------------------------
+- Python 3.11 or higher installed.
+- Git installed.
+- No database or Docker required (all state is managed in-memory).
+
+
+-------------------------------------------------------------------------------
+2. INSTALLATION & SETUP
+-------------------------------------------------------------------------------
+Step 1: Open PowerShell or Terminal and navigate to the project directory:
+        cd "Mini Device Fleet Monitor"
+
+Step 2: Create a Python virtual environment (recommended):
+        python -m venv .venv
+
+Step 3: Activate the virtual environment:
+        - Windows (PowerShell):  .venv\Scripts\Activate.ps1
+        - Windows (CMD):         .venv\Scripts\activate.bat
+        - macOS / Linux:         source .venv/bin/activate
+
+Step 4: Install required dependencies:
+        pip install -r requirements.txt
+
+
+-------------------------------------------------------------------------------
+3. RUNNING THE API SERVER
+-------------------------------------------------------------------------------
+In Terminal #1 (with virtual environment activated):
+
+    uvicorn src.main:app --reload
+
+The server will start on http://localhost:8000.
+
+Available Interfaces:
+- Live Fleet Dashboard:  http://localhost:8000/dashboard
+- Interactive API Docs:  http://localhost:8000/docs (Swagger UI)
+- Raw JSON Summary:      http://localhost:8000/summary
+- Devices Endpoint:      http://localhost:8000/devices
+
+
+-------------------------------------------------------------------------------
+4. RUNNING THE DEVICE SIMULATOR
+-------------------------------------------------------------------------------
+Open Terminal #2 (keep Terminal #1 running):
+
+    cd "Mini Device Fleet Monitor"
+    .venv\Scripts\Activate.ps1
+    python -m simulator.simulator
+
+What the simulator does:
+1. Registers 5 devices (device-01 through device-05).
+2. Spawns background threads sending heartbeats every 5 seconds.
+3. Prints heartbeat confirmations to the console.
+
+Testing OFFLINE Transition via Simulator:
+- In Terminal #2, type a device ID (e.g., device-05) and press Enter.
+- The simulator stops sending heartbeats for device-05.
+- Open http://localhost:8000/dashboard or check http://localhost:8000/summary.
+- Within 30 seconds, device-05 will automatically transition to OFFLINE.
+
+
+-------------------------------------------------------------------------------
+5. RUNNING THE AUTOMATED TEST SUITE
+-------------------------------------------------------------------------------
+In Terminal #3 (or any open terminal):
+
+    python -m pytest tests/ -v
+
+Expected Result: 29 tests PASSED in ~1.5 seconds.
+
+Test Categories Covered:
+1. Device Registration (9 tests)
+2. Heartbeat Processing (8 tests)
+3. Status Retrieval & Filtering (6 tests)
+4. 30-Second Timeout Rule (6 tests)
+
+
+-------------------------------------------------------------------------------
+6. MANUAL TESTING & API CHEAT SHEET (cURL Examples)
+-------------------------------------------------------------------------------
+
+A) REGISTER A NEW DEVICE
+   curl -X POST http://localhost:8000/devices ^
+     -H "Content-Type: application/json" ^
+     -d "{\"id\": \"device-99\", \"name\": \"Sensors Array\"}"
+
+   Expected Status: 201 Created
+   Device initial state: OFFLINE (no heartbeat received yet).
+
+B) SEND A HEARTBEAT (Brings device ONLINE)
+   curl -X POST http://localhost:8000/devices/device-99/heartbeat ^
+     -H "Content-Type: application/json" ^
+     -d "{\"timestamp\": \"2026-09-24T10:00:00Z\", \"status\": \"OK\", \"cpu_usage\": 25, \"signal_strength\": -65}"
+
+   Expected Status: 200 OK
+   Device state instantly updates to: ONLINE.
+
+C) RECOVER AN OFFLINE DEVICE TO ONLINE
+   If a device has gone OFFLINE (after 30 seconds of no heartbeats), simply
+   send a new heartbeat payload (command B above). The server will update the
+   last received timestamp and immediately set the status back to ONLINE.
+
+D) LIST ALL DEVICES
+   curl http://localhost:8000/devices
+
+E) FILTER DEVICES BY STATUS
+   curl "http://localhost:8000/devices?status=ONLINE"
+   curl "http://localhost:8000/devices?status=OFFLINE"
+
+F) GET SINGLE DEVICE DETAILS
+   curl http://localhost:8000/devices/device-99
+
+G) GET FLEET SUMMARY COUNTS
+   curl http://localhost:8000/summary
+   Response format: {"total": 6, "online": 5, "offline": 1}
+
+===============================================================================
