@@ -219,6 +219,8 @@ curl -X POST http://localhost:8000/devices \
 
 ### Send a heartbeat
 
+> **Note:** Any fresh heartbeat received resets the 30-second timer and immediately flips an **OFFLINE** device back to **ONLINE**.
+
 ```bash
 curl -X POST http://localhost:8000/devices/device-01/heartbeat \
   -H "Content-Type: application/json" \
