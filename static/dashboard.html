@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fleet Monitor — Live Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & base ───────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0b0d14;
+      --surface:      #12151f;
+      --surface-2:    #181c2a;
+      --border:       #1e2235;
+      --text:         #e2e8f0;
+      --text-muted:   #64748b;
+      --accent:       #6366f1;
+      --online:       #22c55e;
+      --online-dim:   #14532d;
+      --offline:      #ef4444;
+      --offline-dim:  #450a0a;
+      --warn:         #f59e0b;
+      --radius:       14px;
+      --transition:   200ms ease;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 24px 60px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-left h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-left p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .refresh-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-accent 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-accent {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.75); }
+    }
+
+    /* ── Summary cards ───────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color var(--transition), transform var(--transition);
+    }
+
+    .stat-card:hover { transform: translateY(-2px); }
+
+    .stat-card.online  { border-color: var(--online-dim); }
+    .stat-card.offline { border-color: var(--offline-dim); }
+
+    .stat-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .stat-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      line-height: 1;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-card.total   .stat-value { color: #818cf8; }
+    .stat-card.online  .stat-value { color: var(--online); }
+    .stat-card.offline .stat-value { color: var(--offline); }
+
+    /* ── Section title ───────────────────────────────────────────── */
+    .section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Device grid ─────────────────────────────────────────────── */
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .device-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .device-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .device-card.is-online {
+      border-color: rgba(34, 197, 94, 0.25);
+    }
+
+    .device-card.is-offline {
+      border-color: rgba(239, 68, 68, 0.2);
+      opacity: 0.85;
+    }
+
+    /* card header row */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .device-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: #a5b4fc;
+    }
+
+    .device-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 2px;
+    }
+
+    /* status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-badge.online {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--online);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-badge.offline {
+      background: rgba(239, 68, 68, 0.10);
+      color: var(--offline);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.online .status-dot {
+      animation: pulse-green 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50%       { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+    }
+
+    /* metrics row */
+    .metrics {
+      display: flex;
+      gap: 20px;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .metric-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* progress bar for cpu */
+    .cpu-bar-wrap {
+      height: 4px;
+      background: var(--surface-2);
+      border-radius: 999px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .cpu-bar {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      transition: width 0.6s ease;
+    }
+
+    /* last heartbeat */
+    .last-seen {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .last-seen span {
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* ── Empty / error states ────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      grid-column: 1 / -1;
+    }
+
+    .empty-state p { margin-top: 8px; font-size: 0.88rem; }
+
+    .error-banner {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      font-size: 0.875rem;
+      color: #fca5a5;
+      display: none;
+    }
+
+    /* ── Last updated bar ────────────────────────────────────────── */
+    .footer {
+      margin-top: 36px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .stat-value { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <h1>Device Fleet Monitor</h1>
+      <p>Real-time status dashboard &mdash; auto-refreshes every 3 seconds</p>
+    </div>
+    <div class="refresh-badge">
+      <div class="refresh-dot"></div>
+      <span id="refresh-label">Live</span>
+    </div>
+  </header>
+
+  <!-- Error banner (hidden by default) -->
+  <div class="error-banner" id="error-banner">
+    ⚠ Cannot reach the API. Make sure the server is running on
+    <code>http://localhost:8000</code>.
+  </div>
+
+  <!-- Summary cards -->
+  <div class="summary-grid">
+    <div class="stat-card total">
+      <div class="stat-label">Total devices</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card online">
+      <div class="stat-label">Online</div>
+      <div class="stat-value" id="stat-online">—</div>
+    </div>
+    <div class="stat-card offline">
+      <div class="stat-label">Offline</div>
+      <div class="stat-value" id="stat-offline">—</div>
+    </div>
+  </div>
+
+  <!-- Device grid -->
+  <div class="section-title">Registered devices</div>
+  <div class="device-grid" id="device-grid">
+    <div class="empty-state">
+      <div>📡</div>
+      <p>No devices registered yet.<br>
+         Run the simulator or POST to <code>/devices</code> to get started.</p>
+    </div>
+  </div>
+
+  <div class="footer" id="last-updated">Last updated: —</div>
+</div>
+
+<script>
+  const API = '';  // same origin
+
+  function fmt(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function deviceCard(d) {
+    const online   = d.status === 'ONLINE';
+    const cpuVal   = d.cpu_usage != null ? d.cpu_usage : null;
+    const sigVal   = d.signal_strength != null ? d.signal_strength + ' dBm' : '—';
+
+    return `
+      <div class="device-card ${online ? 'is-online' : 'is-offline'}">
+        <div class="card-header">
+          <div>
+            <div class="device-id">${d.id}</div>
+            <div class="device-name">${d.name}</div>
+          </div>
+          <div class="status-badge ${online ? 'online' : 'offline'}">
+            <div class="status-dot"></div>
+            ${d.status}
+          </div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">CPU</div>
+            <div class="metric-value">${cpuVal != null ? cpuVal + '%' : '—'}</div>
+            ${cpuVal != null ? `
+              <div class="cpu-bar-wrap">
+                <div class="cpu-bar" style="width:${cpuVal}%"></div>
+              </div>` : ''}
+          </div>
+          <div class="metric">
+            <div class="metric-label">Signal</div>
+            <div class="metric-value">${sigVal}</div>
+          </div>
+        </div>
+
+        <div class="last-seen">
+          Last heartbeat: <span>${fmt(d.last_heartbeat)}</span>
+        </div>
+      </div>`;
+  }
+
+  async function refresh() {
+    const errorBanner = document.getElementById('error-banner');
+    try {
+      const [summaryResp, devicesResp] = await Promise.all([
+        fetch(`${API}/summary`),
+        fetch(`${API}/devices`),
+      ]);
+
+      if (!summaryResp.ok || !devicesResp.ok) throw new Error('API error');
+      errorBanner.style.display = 'none';
+
+      const summary = await summaryResp.json();
+      const devices = await devicesResp.json();
+
+      document.getElementById('stat-total').textContent   = summary.total;
+      document.getElementById('stat-online').textContent  = summary.online;
+      document.getElementById('stat-offline').textContent = summary.offline;
+
+      const grid = document.getElementById('device-grid');
+      if (devices.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <div>📡</div>
+            <p>No devices registered yet.<br>
+               Run the simulator or POST to <code>/devices</code> to get started.</p>
+          </div>`;
+      } else {
+        // Sort: ONLINE first, then by id
+        devices.sort((a, b) => {
+          if (a.status !== b.status) return a.status === 'ONLINE' ? -1 : 1;
+          return a.id.localeCompare(b.id);
+        });
+        grid.innerHTML = devices.map(deviceCard).join('');
+      }
+
+      document.getElementById('last-updated').textContent =
+        'Last updated: ' + new Date().toLocaleTimeString();
+
+    } catch (err) {
+      errorBanner.style.display = 'block';
+    }
+  }
+
+  // Initial load + 3-second polling
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
