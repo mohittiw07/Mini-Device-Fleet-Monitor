@@ -52,7 +52,7 @@ mini-device-fleet-monitor/
 │   ├── models.py     ← Pydantic request/response schemas (validation)
 │   └── main.py       ← FastAPI app — 5 endpoints + /dashboard route
 ├── tests/
-│   └── test_api.py   ← 20 automated tests across 4 required categories
+│   └── test_api.py   ← 29 automated tests across 4 required categories
 ├── simulator/
 │   └── simulator.py  ← 5 simulated devices, interactive stop
 ├── static/
@@ -175,14 +175,14 @@ Press **Ctrl+C** to stop all devices and exit.
 pytest tests/ -v
 ```
 
-Expected output (20 tests):
+Expected output (29 tests):
 
 ```
 tests/test_api.py::TestDeviceRegistration::test_register_device_returns_201        PASSED
 tests/test_api.py::TestDeviceRegistration::test_new_device_starts_offline          PASSED
 tests/test_api.py::TestDeviceRegistration::test_duplicate_registration_returns_409 PASSED
-... (17 more)
-20 passed in Xs
+... (26 more)
+29 passed in Xs
 ```
 
 The test file covers all four required categories:
